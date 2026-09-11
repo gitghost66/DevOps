@@ -1,0 +1,118 @@
+name: CI Pipeline — DevOps Lab 1
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  NODE_VERSION: '20'
+  APP_NAME: devops-lab1-app
+
+jobs:
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # JOB 1: Lint & Test
+  # Mirrors the Jenkins Lint + Test stages
+  # ─────────────────────────────────────────────────────────────────────────
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ✅ Checkout source code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: 📦 Install dependencies (npm ci)
+        working-directory: app
+        run: npm ci
+
+      - name: 🔍 Lint (ESLint)
+        working-directory: app
+        run: npm run lint
+
+      - name: 🧪 Run unit tests with coverage
+        working-directory: app
+        run: npm test -- --ci --coverage
+
+      - name: 📊 Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: app/coverage/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # JOB 2: Build & Docker
+  # Mirrors the Jenkins Build + Docker Build stages
+  # ─────────────────────────────────────────────────────────────────────────
+  build-and-docker:
+    name: Build & Docker Image
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+
+    steps:
+      - name: ✅ Checkout source code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: 📦 Install production dependencies
+        working-directory: app
+        run: npm ci --omit=dev
+
+      - name: 🏗️ Build artifact
+        run: |
+          mkdir -p build
+          cp -r app/ build/app/
+          echo "Build #: ${{ github.run_number }}" > build/BUILD_INFO.txt
+          echo "Commit:  ${{ github.sha }}"         >> build/BUILD_INFO.txt
+          echo "Branch:  ${{ github.ref_name }}"    >> build/BUILD_INFO.txt
+          echo "Built:   $(date -u)"                >> build/BUILD_INFO.txt
+          cat build/BUILD_INFO.txt
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🐳 Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: |
+            ${{ env.APP_NAME }}:latest
+            ${{ env.APP_NAME }}:${{ github.run_number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 🚀 Smoke test — run container
+        run: |
+          docker run -d \
+            --name ${{ env.APP_NAME }} \
+            -p 3000:3000 \
+            -e NODE_ENV=production \
+            ${{ env.APP_NAME }}:latest
+          sleep 5
+          curl -sf http://localhost:3000/health && echo "✅ Health check PASSED" || echo "❌ Health check FAILED"
+          curl -sf http://localhost:3000/ | python3 -m json.tool
+
+      - name: 📦 Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-info
+          path: build/BUILD_INFO.txt
+          retention-days: 30

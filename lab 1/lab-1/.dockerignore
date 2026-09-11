@@ -1,0 +1,13 @@
+node_modules/
+npm-debug.log
+.npm/
+coverage/
+.nyc_output/
+*.log
+.DS_Store
+build/
+dist/
+.env
+.env.*
+*.tmp
+*.swp
