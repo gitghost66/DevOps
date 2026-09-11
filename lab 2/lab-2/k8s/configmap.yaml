@@ -1,0 +1,19 @@
+# ─── ConfigMap — Lab 2 App Configuration ──────────────────────────────────────
+# Stores non-sensitive configuration that pods consume as environment variables.
+# Apply: kubectl apply -f k8s/configmap.yaml
+# View:  kubectl describe configmap lab2-app-config
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lab2-app-config
+  namespace: default
+  labels:
+    app: lab2-app
+    lab: "lab2"
+data:
+  NODE_ENV: "production"
+  APP_VERSION: "1.0.0"
+  APP_NAME: "devops-lab2-app"
+  LOG_LEVEL: "info"
+  PORT: "3000"

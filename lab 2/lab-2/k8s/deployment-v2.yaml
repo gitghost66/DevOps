@@ -1,0 +1,88 @@
+# ─── Deployment — Lab 2 App v2.0.0 (Rolling Update Target) ───────────────────
+# Apply this to trigger a rolling update from v1.0.0 → v2.0.0.
+# Kubernetes will gradually replace old pods with new ones (zero downtime).
+#
+# Steps:
+#  1. Build v2 image:   docker build -t devops-lab2-app:2.0.0 .
+#  2. Apply this file:  kubectl apply -f k8s/deployment-v2.yaml
+#  3. Watch rollout:    kubectl rollout status deployment/lab2-app
+#  4. Verify version:   curl $(minikube service lab2-app-service --url)/version
+#  5. To rollback:      kubectl rollout undo deployment/lab2-app
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lab2-app
+  namespace: default
+  labels:
+    app: lab2-app
+    version: "2.0.0"
+    lab: "lab2"
+  annotations:
+    kubernetes.io/change-cause: "Rolling update to v2.0.0 — new /version endpoint"
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: lab2-app
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+  template:
+    metadata:
+      labels:
+        app: lab2-app
+        version: "2.0.0"
+    spec:
+      containers:
+        - name: lab2-app
+          image: devops-lab2-app:2.0.0   # <── only change from v1 deployment
+          imagePullPolicy: Never
+
+          ports:
+            - containerPort: 3000
+              name: http
+
+          # ── Override APP_VERSION via inline env (overrides ConfigMap value) ─
+          env:
+            - name: APP_VERSION
+              value: "2.0.0"
+            - name: APP_NAME
+              value: "devops-lab2-app"
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: PORT
+              value: "3000"
+
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "250m"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3

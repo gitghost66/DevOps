@@ -1,0 +1,37 @@
+# ─── Service — Blue-Green Traffic Switch ──────────────────────────────────────
+# Initially points to the "blue" slot.
+# Switch to green by patching the selector — instant, zero-downtime cutover.
+#
+# Apply: kubectl apply -f k8s/blue-green/service.yaml
+#
+# Switch to GREEN (cutover):
+#   kubectl patch service lab2-app-bg-service \
+#     -p '{"spec":{"selector":{"app":"lab2-app","slot":"green"}}}'
+#
+# Switch back to BLUE (rollback):
+#   kubectl patch service lab2-app-bg-service \
+#     -p '{"spec":{"selector":{"app":"lab2-app","slot":"blue"}}}'
+#
+# Verify active slot:
+#   kubectl get service lab2-app-bg-service -o jsonpath='{.spec.selector}'
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: lab2-app-bg-service
+  namespace: default
+  labels:
+    app: lab2-app
+    lab: "lab2"
+    strategy: blue-green
+spec:
+  type: NodePort
+  selector:
+    app: lab2-app
+    slot: blue          # ← change to "green" to cut over traffic
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 3000
+      nodePort: 30081   # Different port from rolling-update service (30080)

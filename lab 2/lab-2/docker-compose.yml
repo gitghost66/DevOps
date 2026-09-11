@@ -1,0 +1,64 @@
+version: '3.9'
+
+# ─── Docker Compose — Lab 2 Multi-Container Setup ─────────────────────────────
+# Demonstrates container orchestration before moving to Kubernetes.
+# Run: docker compose up -d
+# Stop: docker compose down
+
+services:
+
+  # ── Main application ─────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: devops-lab2-app:1.0.0
+    container_name: lab2-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - APP_VERSION=1.0.0
+      - APP_NAME=devops-lab2-app
+      - LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - lab2-network
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ── Redis sidecar — demonstrates multi-container orchestration ───────────────
+  redis:
+    image: redis:7-alpine
+    container_name: lab2-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - lab2-network
+
+# ── Named volumes ──────────────────────────────────────────────────────────────
+volumes:
+  redis-data:
+    driver: local
+
+# ── Networks ───────────────────────────────────────────────────────────────────
+networks:
+  lab2-network:
+    driver: bridge

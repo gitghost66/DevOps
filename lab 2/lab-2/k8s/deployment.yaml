@@ -1,0 +1,84 @@
+# ─── Deployment — Lab 2 App v1.0.0 (Rolling Update Strategy) ─────────────────
+# Deploys 3 replicas of the app with a RollingUpdate strategy.
+# This is the BASE deployment. Use deployment-v2.yaml to trigger a rolling update.
+#
+# Apply:  kubectl apply -f k8s/deployment.yaml
+# Status: kubectl rollout status deployment/lab2-app
+# Rollback (if needed): kubectl rollout undo deployment/lab2-app
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lab2-app
+  namespace: default
+  labels:
+    app: lab2-app
+    version: "1.0.0"
+    lab: "lab2"
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+    kubernetes.io/change-cause: "Initial deployment v1.0.0"
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: lab2-app
+
+  # ── Rolling Update Strategy ─────────────────────────────────────────────────
+  # maxSurge: 1     → allows 1 extra pod above desired count during update
+  # maxUnavailable: 0 → ensures 0 pods go down (zero-downtime rollout)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+  template:
+    metadata:
+      labels:
+        app: lab2-app
+        version: "1.0.0"
+    spec:
+      containers:
+        - name: lab2-app
+          image: devops-lab2-app:1.0.0
+          imagePullPolicy: Never   # Use local image built via: eval $(minikube docker-env)
+
+          ports:
+            - containerPort: 3000
+              name: http
+
+          # ── ConfigMap environment injection ────────────────────────────────
+          envFrom:
+            - configMapRef:
+                name: lab2-app-config
+
+          # ── Resource limits & requests ─────────────────────────────────────
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "250m"
+
+          # ── Liveness probe — restarts the container if unhealthy ───────────
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # ── Readiness probe — removes from Service endpoints if not ready ──
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3

@@ -1,0 +1,82 @@
+# ─── Green Deployment — Blue-Green Strategy (STANDBY/NEW slot) ────────────────
+# The "green" environment runs the new version (v2.0.0) for validation.
+# After verifying green is healthy, flip the Service selector from blue → green.
+#
+# Apply: kubectl apply -f k8s/blue-green/green-deployment.yaml
+#
+# Switch traffic to green (instant cutover — no downtime):
+#   kubectl patch service lab2-app-bg-service \
+#     -p '{"spec":{"selector":{"app":"lab2-app","slot":"green"}}}'
+#
+# Rollback to blue (instant):
+#   kubectl patch service lab2-app-bg-service \
+#     -p '{"spec":{"selector":{"app":"lab2-app","slot":"blue"}}}'
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lab2-app-green
+  namespace: default
+  labels:
+    app: lab2-app
+    slot: green
+    version: "2.0.0"
+    lab: "lab2"
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: lab2-app
+      slot: green
+
+  template:
+    metadata:
+      labels:
+        app: lab2-app
+        slot: green
+        version: "2.0.0"
+    spec:
+      containers:
+        - name: lab2-app
+          image: devops-lab2-app:2.0.0
+          imagePullPolicy: Never
+
+          ports:
+            - containerPort: 3000
+
+          env:
+            - name: APP_VERSION
+              value: "2.0.0"
+            - name: APP_NAME
+              value: "devops-lab2-app"
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: PORT
+              value: "3000"
+
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "250m"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3

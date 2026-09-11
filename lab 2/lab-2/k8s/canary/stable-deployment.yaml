@@ -1,0 +1,74 @@
+# ─── Stable Deployment — Canary Strategy (90% traffic) ───────────────────────
+# 9 replicas of stable v1.0.0. Combined with 1 canary replica, this gives
+# roughly 90% of traffic to stable and 10% to canary.
+#
+# Apply: kubectl apply -f k8s/canary/stable-deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lab2-app-stable
+  namespace: default
+  labels:
+    app: lab2-app
+    track: stable
+    version: "1.0.0"
+    lab: "lab2"
+spec:
+  replicas: 9   # 9 out of 10 total replicas → ~90% of traffic
+
+  selector:
+    matchLabels:
+      app: lab2-app
+      track: stable
+
+  template:
+    metadata:
+      labels:
+        app: lab2-app
+        track: stable
+        version: "1.0.0"
+    spec:
+      containers:
+        - name: lab2-app
+          image: devops-lab2-app:1.0.0
+          imagePullPolicy: Never
+
+          ports:
+            - containerPort: 3000
+
+          env:
+            - name: APP_VERSION
+              value: "1.0.0"
+            - name: APP_NAME
+              value: "devops-lab2-app"
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: PORT
+              value: "3000"
+
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "250m"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
