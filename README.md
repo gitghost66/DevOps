@@ -10,7 +10,7 @@
 |---|---|---|
 | [Lab 1](./lab%201/lab-1/) | DevOps Foundations & Continuous Integration | ✅ Complete |
 | [Lab 2](./lab%202/lab-2/) | Containerization & Kubernetes Orchestration | ✅ Complete |
-| Lab 3 | *(coming soon)* | 🔜 |
+| [Lab 3](./lab3/) | Monitoring, Logging & DevSecOps | ✅ Complete |
 
 ---
 
@@ -22,6 +22,11 @@
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white)
 ![Minikube](https://img.shields.io/badge/Minikube-F7B93E?logo=kubernetes&logoColor=black)
+![Ansible](https://img.shields.io/badge/Ansible-EE0000?logo=ansible&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-844FBA?logo=terraform&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-F46800?logo=grafana&logoColor=white)
+![Elasticsearch](https://img.shields.io/badge/Elasticsearch-005571?logo=elasticsearch&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white)
 ![Ubuntu](https://img.shields.io/badge/Ubuntu_24.04_LTS-E95420?logo=ubuntu&logoColor=white)
 
@@ -33,5 +38,5 @@
 DevOps/
 ├── lab 1/lab-1/    → Foundations & CI/CD (Jenkins, Docker, Node.js)
 ├── lab 2/lab-2/    → Containerization & Kubernetes (Docker Compose, Minikube, kubectl)
-└── lab-3/          → (upcoming)
+└── lab3/           → Monitoring, Logging & DevSecOps (Ansible, Terraform, Prometheus, Grafana, ELK, Selenium)
 ```
