@@ -1,0 +1,80 @@
+---
+# ELK Role Tasks
+- name: Set vm.max_map_count for Elasticsearch
+  sysctl:
+    name: vm.max_map_count
+    value: '262144'
+    state: present
+    reload: yes
+
+- name: Install Docker
+  apt:
+    name:
+      - docker.io
+      - docker-compose
+    state: present
+    update_cache: yes
+
+- name: Create ELK directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0775'
+  loop:
+    - /opt/elk
+    - /opt/elk/elasticsearch
+    - /opt/elk/logstash
+    - /opt/elk/kibana
+    - /opt/elk/data
+
+- name: Deploy ELK docker-compose file
+  copy:
+    src: "{{ playbook_dir }}/../../elk/docker-compose.yml"
+    dest: /opt/elk/docker-compose.yml
+    mode: '0644'
+
+- name: Deploy Elasticsearch configuration
+  copy:
+    src: "{{ playbook_dir }}/../../elk/elasticsearch/elasticsearch.yml"
+    dest: /opt/elk/elasticsearch/elasticsearch.yml
+    mode: '0644'
+
+- name: Deploy Logstash pipeline
+  copy:
+    src: "{{ playbook_dir }}/../../elk/logstash/logstash.conf"
+    dest: /opt/elk/logstash/logstash.conf
+    mode: '0644'
+
+- name: Deploy Kibana configuration
+  copy:
+    src: "{{ playbook_dir }}/../../elk/kibana/kibana.yml"
+    dest: /opt/elk/kibana/kibana.yml
+    mode: '0644'
+
+- name: Start ELK stack
+  community.docker.docker_compose:
+    project_src: /opt/elk
+    state: present
+    pull: yes
+
+- name: Wait for Elasticsearch
+  uri:
+    url: http://localhost:9200/_cluster/health
+    status_code: 200
+  retries: 15
+  delay: 10
+
+- name: Create default index pattern via Kibana API
+  uri:
+    url: http://localhost:5601/api/saved_objects/index-pattern/logstash-*
+    method: POST
+    body_format: json
+    body:
+      attributes:
+        title: "logstash-*"
+        timeFieldName: "@timestamp"
+    headers:
+      kbn-xsrf: "true"
+    status_code: [200, 409]
+  retries: 5
+  delay: 10

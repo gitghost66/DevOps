@@ -1,0 +1,27 @@
+# Kibana Configuration
+server.name: kibana
+server.host: "0.0.0.0"
+server.port: 5601
+
+# Elasticsearch connection
+elasticsearch.hosts: ["http://elasticsearch:9200"]
+elasticsearch.requestTimeout: 30000
+
+# Logging
+logging.level: warn
+logging.appenders.default:
+  type: console
+  layout:
+    type: json
+
+# Security (disabled for lab)
+xpack.security.enabled: false
+
+# Telemetry
+telemetry.enabled: false
+
+# Index patterns
+kibana.defaultAppId: "discover"
+
+# Maps
+map.includeElasticMapsService: true

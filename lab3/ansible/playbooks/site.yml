@@ -1,0 +1,22 @@
+---
+# Master Playbook – provisions all services across all hosts
+- name: Apply common configuration to all servers
+  hosts: all
+  roles:
+    - common
+
+- name: Deploy Prometheus and Grafana
+  hosts: monitoring_servers
+  roles:
+    - prometheus
+    - grafana
+
+- name: Deploy ELK Stack
+  hosts: elk_servers
+  roles:
+    - elk
+
+- name: Configure application servers
+  hosts: app_servers
+  roles:
+    - common

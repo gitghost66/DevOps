@@ -1,0 +1,65 @@
+{
+  "version": "1.0.0",
+  "description": "Feature flags for Lab 3 application – controls rollout of new features",
+  "environment": "lab",
+  "lastUpdated": "2026-09-15",
+  "flags": {
+    "new_dashboard": {
+      "enabled": true,
+      "description": "Enable new monitoring dashboard UI",
+      "rolloutPercentage": 100,
+      "tags": ["ui", "dashboard"],
+      "createdAt": "2026-09-01"
+    },
+    "elk_logging": {
+      "enabled": true,
+      "description": "Route application logs to ELK stack instead of local files",
+      "rolloutPercentage": 100,
+      "tags": ["logging", "elk"],
+      "createdAt": "2026-09-01"
+    },
+    "prometheus_metrics": {
+      "enabled": true,
+      "description": "Expose /metrics endpoint for Prometheus scraping",
+      "rolloutPercentage": 100,
+      "tags": ["monitoring", "prometheus"],
+      "createdAt": "2026-09-01"
+    },
+    "dark_mode": {
+      "enabled": false,
+      "description": "Enable dark mode for the web UI (beta)",
+      "rolloutPercentage": 20,
+      "tags": ["ui", "beta"],
+      "createdAt": "2026-09-10"
+    },
+    "rate_limiting": {
+      "enabled": true,
+      "description": "Enable API rate limiting (100 req/min per IP)",
+      "rolloutPercentage": 100,
+      "config": {
+        "requestsPerMinute": 100,
+        "burstLimit": 150
+      },
+      "tags": ["security", "api"],
+      "createdAt": "2026-09-05"
+    },
+    "canary_deployment": {
+      "enabled": false,
+      "description": "Route 10% of traffic to canary release",
+      "rolloutPercentage": 0,
+      "config": {
+        "canaryWeight": 10,
+        "stableWeight": 90
+      },
+      "tags": ["deployment", "canary"],
+      "createdAt": "2026-09-12"
+    },
+    "load_testing_mode": {
+      "enabled": false,
+      "description": "Disable non-essential features during load testing",
+      "rolloutPercentage": 0,
+      "tags": ["testing", "performance"],
+      "createdAt": "2026-09-15"
+    }
+  }
+}

@@ -1,0 +1,50 @@
+---
+# Security Scanning Playbook – installs and runs Trivy + OWASP ZAP
+- name: DevSecOps – Security Scanning
+  hosts: app_servers
+  become: true
+  vars:
+    trivy_version: "0.50.1"
+    app_url: "http://localhost:8080"
+
+  tasks:
+    - name: Install Trivy vulnerability scanner
+      shell: |
+        wget -qO- https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v{{ trivy_version }}
+      args:
+        creates: /usr/local/bin/trivy
+
+    - name: Scan Docker images for vulnerabilities
+      shell: trivy image --exit-code 0 --severity HIGH,CRITICAL --format json --output /tmp/trivy-report.json myapp:latest
+      register: trivy_scan
+      ignore_errors: true
+
+    - name: Fetch Trivy scan report
+      fetch:
+        src: /tmp/trivy-report.json
+        dest: ./security-reports/trivy-{{ inventory_hostname }}.json
+        flat: yes
+
+    - name: Run OWASP Dependency Check
+      shell: |
+        docker run --rm \
+          -v $(pwd):/src \
+          owasp/dependency-check:latest \
+          --project "Lab3App" \
+          --scan /src \
+          --format HTML \
+          --out /src/dependency-check-report
+      args:
+        chdir: /opt/app
+
+    - name: Check for secrets in code (git-secrets)
+      shell: |
+        docker run --rm \
+          -v /opt/app:/app \
+          zricethezav/gitleaks:latest \
+          detect --source=/app --report-format=json --report-path=/tmp/gitleaks-report.json
+      ignore_errors: true
+
+    - name: Print scan summary
+      debug:
+        msg: "Security scans completed. Check /tmp/ for reports."

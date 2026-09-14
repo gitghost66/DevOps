@@ -1,0 +1,61 @@
+---
+# Grafana Role Tasks
+- name: Create Grafana directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/grafana
+    - /var/lib/grafana
+    - /var/log/grafana
+
+- name: Add Grafana APT repository
+  shell: |
+    wget -q -O /usr/share/keyrings/grafana.key https://apt.grafana.com/gpg.key
+    echo "deb [signed-by=/usr/share/keyrings/grafana.key] https://apt.grafana.com stable main" | tee /etc/apt/sources.list.d/grafana.list
+  args:
+    creates: /etc/apt/sources.list.d/grafana.list
+
+- name: Install Grafana
+  apt:
+    name: grafana
+    state: present
+    update_cache: yes
+
+- name: Configure Grafana datasource (Prometheus)
+  copy:
+    dest: /etc/grafana/provisioning/datasources/prometheus.yml
+    content: |
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://localhost:9090
+          isDefault: true
+          editable: false
+    mode: '0644'
+  notify: Restart grafana
+
+- name: Install Grafana plugins
+  community.grafana.grafana_plugin:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - grafana-piechart-panel
+    - grafana-clock-panel
+    - vonage-status-panel
+  notify: Restart grafana
+
+- name: Start and enable Grafana
+  systemd:
+    name: grafana-server
+    state: started
+    enabled: yes
+
+handlers:
+  - name: Restart grafana
+    systemd:
+      name: grafana-server
+      state: restarted

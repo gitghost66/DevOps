@@ -1,0 +1,97 @@
+---
+# Monitoring Playbook – Installs Prometheus and Grafana using Docker
+- name: Deploy Prometheus and Grafana
+  hosts: monitoring_servers
+  become: true
+  vars:
+    prometheus_version: "v2.51.0"
+    grafana_version: "10.4.2"
+    prometheus_port: 9090
+    grafana_port: 3000
+    alertmanager_port: 9093
+
+  tasks:
+    - name: Install Docker and prerequisites
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+          - python3-docker
+        state: present
+        update_cache: yes
+
+    - name: Start and enable Docker
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create monitoring directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      loop:
+        - /opt/monitoring
+        - /opt/monitoring/prometheus
+        - /opt/monitoring/grafana/provisioning/datasources
+        - /opt/monitoring/grafana/provisioning/dashboards
+
+    - name: Copy Prometheus configuration
+      template:
+        src: "{{ playbook_dir }}/../roles/prometheus/templates/prometheus.yml.j2"
+        dest: /opt/monitoring/prometheus/prometheus.yml
+        mode: '0644'
+      notify: Restart prometheus
+
+    - name: Copy alert rules
+      copy:
+        src: "{{ playbook_dir }}/../../monitoring/prometheus/alert_rules.yml"
+        dest: /opt/monitoring/prometheus/alert_rules.yml
+        mode: '0644'
+      notify: Restart prometheus
+
+    - name: Deploy monitoring stack via docker-compose
+      copy:
+        src: "{{ playbook_dir }}/../../monitoring/docker-compose.yml"
+        dest: /opt/monitoring/docker-compose.yml
+        mode: '0644'
+
+    - name: Start monitoring stack
+      community.docker.docker_compose:
+        project_src: /opt/monitoring
+        state: present
+        pull: yes
+
+    - name: Wait for Prometheus to be ready
+      uri:
+        url: "http://localhost:{{ prometheus_port }}/-/healthy"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 10
+      delay: 5
+
+    - name: Wait for Grafana to be ready
+      uri:
+        url: "http://localhost:{{ grafana_port }}/api/health"
+        status_code: 200
+      register: grafana_health
+      until: grafana_health.status == 200
+      retries: 10
+      delay: 5
+
+    - name: Print monitoring endpoints
+      debug:
+        msg:
+          - "Prometheus: http://{{ ansible_host }}:{{ prometheus_port }}"
+          - "Grafana:    http://{{ ansible_host }}:{{ grafana_port }} (admin/admin)"
+
+  handlers:
+    - name: Restart prometheus
+      community.docker.docker_container:
+        name: prometheus
+        state: started
+        restart: yes
