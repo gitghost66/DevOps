@@ -1,4 +1,4 @@
-# DevOps Labs — gitghost66
+# DevOps Labs 
 
 > A collection of DevOps lab submissions covering CI/CD, containerization, infrastructure as code, and more.
 
